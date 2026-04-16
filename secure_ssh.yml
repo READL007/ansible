@@ -1,0 +1,35 @@
+- hosts: all
+  become: yes
+
+  vars:
+    allowed_ip: "10.48.101.49"   
+    
+  tasks:
+
+    - name: Ensure OpenSSH server is installed
+      apt:
+        name: openssh-server
+        state: present
+        update_cache: yes
+
+    - name: Ensure ansible user exists
+      user:
+        name: ansible
+        state: present
+
+    - name: Harden SSH configuration using blockinfile
+      blockinfile:
+        path: /etc/ssh/sshd_config
+        block: |
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          PermitRootLogin no
+          AllowUsers ansible
+
+          Match User ansible
+              AllowUsers ansible@{{ allowed_ip }}
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
