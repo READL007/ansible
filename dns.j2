@@ -1,0 +1,13 @@
+options {
+    directory "/var/cache/bind";
+
+    forwarders {
+        {{ ansible_dns.nameservers[0] }};
+    };
+
+    forward only;
+    dnssec-validation no;
+
+    auth-nxdomain no;
+    listen-on-v6 { any; };
+};

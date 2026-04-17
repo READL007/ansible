@@ -1,35 +1,49 @@
-- hosts: all
-  become: yes
+- hosts : all
+  become: true
 
-  vars:
-    allowed_ip: "10.48.101.49"   
-    
   tasks:
-
-    - name: Ensure OpenSSH server is installed
-      apt:
-        name: openssh-server
-        state: present
-        update_cache: yes
-
-    - name: Ensure ansible user exists
-      user:
-        name: ansible
-        state: present
-
-    - name: Harden SSH configuration using blockinfile
+# Secure SSH :
+    - name: sec ssh
       blockinfile:
         path: /etc/ssh/sshd_config
+        state: present
+        backup: yes
+        insertafter: "EOF"
         block: |
-          PasswordAuthentication no
-          PubkeyAuthentication yes
-          PermitRootLogin no
-          AllowUsers ansible
-
           Match User ansible
-              AllowUsers ansible@{{ allowed_ip }}
-
-    - name: Restart SSH service
+                AllowUsers ansible@10.48.101.32
+                PasswordAuthentication no
+    - name: restart ssh
       service:
-        name: sshd
+        name: sshd 
+        state: restarted
+        
+# Disable login with password :
+    - name: disable login password
+      user:
+        name: ansible
+        password: "!"
+        
+# Install Bind sur les deux serveur :
+    - name: Install Bind
+      apt:
+        update_cache: yes
+        name: bind9
+        state: present
+
+    - name: Remplacer la configuration DNS via template
+      copy:
+        dest: /etc/bind/named.conf.options
+        content: "{{ lookup('template', 'dns.j2') }}"
+      notify: restart bind9
+
+  handlers:
+    - name: restart ssh
+      service:
+        name: ssh
+        state: restarted
+
+    - name: restart bind9
+      service:
+        name: bind9
         state: restarted
